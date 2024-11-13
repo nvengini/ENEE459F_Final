@@ -27,7 +27,7 @@ module fp_add_sub(
     input start,
     input reset,
     output [31:0] result,
-    output done
+    output reg done
     );
     localparam IDLE = 4'd0,
                DONE = 4'd1,
@@ -50,16 +50,40 @@ module fp_add_sub(
     
     // reg [31:0] input_greater;
     reg sign_greater;
-    reg [7:0] exp_greater;
-    reg [22:0] mant_greater;
+    reg [7:0] exp_greater;              // Believe I can leave exponent in excess 127
+                                        // The only operations we do are add or subtract to it,
+                                        // so an excess 127 binary number will still work the same as
+                                        // an excess 0 numbers
+    reg [23:0] mant_greater;
     
     // reg [31:0] input_smaller;
     reg sign_smaller;
     reg [7:0] exp_smaller;
-    reg [22:0] mant_smaller;
+    reg [23:0] mant_smaller;
     
-    reg [22:0] mant_shifted;
-    reg [22:0] overflow;
+    reg sign_1_flag;
+    
+    reg [23:0] mant_shifted;
+    reg [23:0] overflow;
+    reg g_bit;
+    reg r_bit;
+    reg sticky_bit;
+    
+    reg [4:0] shift_counter = 0;
+    
+    reg [23:0] S; //  SUM register for mantissa
+    reg right_shift_flag;
+    reg complement_flag;
+    
+    wire [23:0] sum_prelim;
+    wire cout;
+    CLA_tree_24_bit adder1(.a(mant_greater), .b(mant_shifted), .cin(0), .sum(sum_prelim), .cout(cout));
+    
+    wire [23:0] s_plus_1;
+    wire cout_round;
+    CLA_tree_24_bit adder2(.a(S), .b(24'h000001), .cin(0), .sum(s_plus_1), .cout(cout_round));
+    
+    assign result = {sign_out, exp_out, mant_out};
     
     always @ (posedge clk or posedge reset) begin
         if (reset) begin
@@ -70,15 +94,30 @@ module fp_add_sub(
             sign_greater <= 0;
             exp_greater <= 0;
             mant_greater <= 0;
+            sign_smaller <= 0;
+            exp_smaller <= 0;
+            mant_smaller <= 0;
             
-            
+            sign_1_flag <= 0;
             mant_shifted <= 0;
             overflow <= 0;
+            S <= 0;
+            
+            g_bit<=0;
+            r_bit<=0;
+            sticky_bit<=0;
             
             swap_flag <=0;
+            complement_flag <= 0;
+            
+            shift_counter <= 0;
+            right_shift_flag <= 0;
+         
+            
             exp_out <= 0;
             sign_out <=0;
             mant_out <=0;
+            done <= 0;
         end else begin
             case (state)
                 IDLE: begin
@@ -91,48 +130,156 @@ module fp_add_sub(
                             // input_greater <= a1;
                             sign_greater <= a1[31];
                             exp_greater <= a1[30:23];
-                            mant_greater <= a1[22:0];
+                            mant_greater <= {1'b1, a1[22:0]};
                             exp_out <= a1[30:23];
                             // input_smaller <= a2;
                             sign_smaller <= a2[31];
                             exp_smaller <= a2[30:23];
-                            mant_smaller <= a2[22:0];
+                            mant_smaller <= {1'b1, a2[22:0]};
                             swap_flag <=0;
                             
                         end else begin                     // exp1 < exp2
 
                             sign_greater <= a2[31];
                             exp_greater <= a2[30:23];
-                            mant_greater <= a2[22:0];
+                            mant_greater <= {1'b1, a2[22:0]};
                                                        
                             exp_out <= a2[30:23];
                             
                             sign_smaller <= a1[31];
                             exp_smaller <= a1[30:23];
-                            mant_smaller <= a1[22:0];
+                            mant_smaller <= {1'b1, a1[22:0]};
                             
                             swap_flag <=1;
                         end
-                        state <= SIGN_1;  
+                        state <= SIGN_1; // TODO  change to SHIFT
                 end
-                SIGN_1: begin 
-                    if (sign_greater ^ sign_smaller) begin
+                // CHANGE THE ORDER OF SHIFTING (do this first) and COMPLEMENTING (do this second)
+                // *********************************
+                // *******************************
+                // ******************************
+                SIGN_1: begin                                   
+                    if (sign_greater != sign_smaller) begin
                         mant_smaller <= ~mant_smaller + 1'b1;
+                        sign_1_flag <=1;
+                    end else begin
+                        sign_1_flag <=0;
                     end
-                    state <= SHIFT;  
+                    state <= SHIFT;  // TODO Change to SUM
                 end
                 
                 SHIFT: begin
+                    // NEED TO FIND A WAY TO SHIFT IN 1s after the complement
+                    
                     mant_shifted <= mant_smaller >> (exp_greater - exp_smaller);
-                    overflow <= (mant_smaller & ((1 << (exp_greater - exp_smaller)) - 1)) << (23-(exp_greater - exp_smaller));
-                    state <= SUM;
+                    
+                    overflow <= (mant_smaller & ((1 << (exp_greater - exp_smaller)) - 1)) << (24-(exp_greater - exp_smaller));
+                    state <= SUM; // TODO Change to SIGN_1
                 end
                 
-                SUM: begin
+                SUM: begin  // WILL BE REPLACED WITH THE CLA TREE ADDER
+                    g_bit <= overflow[23];
+                    r_bit <= overflow[22];
+                    sticky_bit <= | overflow[21:0];
+                    
+                    S <= sum_prelim;
+                    state <= CHECK_SIGN;
+                end
+                
+                CHECK_SIGN: begin 
+                    if ((sign_greater != sign_smaller) && (S[23] == 1) && (cout == 0)) begin
+                        S <= ~S + 1'b1;
+                        complement_flag <= 1;
+                        state <= SHIFT_SUM;
+                    end else begin
+                        complement_flag <= 0;
+                        state <= SHIFT_SUM;
+                    end
+                end
+                SHIFT_SUM: begin 
+                    if ((sign_greater == sign_smaller) && cout == 1) begin // Right shift
+                        {S, r_bit} <= {1'b1, S[23:0]}; // Fill in carry_out bit
+                        exp_out <= exp_out + 1;
+                        state <= SET_R_S;
+                        right_shift_flag <= 1;
+    
+                    end else if (S[23] == 1) begin
+                        state <= SET_R_S;
+                        right_shift_flag <= 0;
+                    end else begin
+                        right_shift_flag <= 0;
+                        
+                        if (shift_counter == 0) begin
+                            S <= {S[22:0], g_bit};
+                            shift_counter <= shift_counter + 1;
+                            exp_out <= exp_out - 1;
+                            state <= SHIFT_SUM;
+                        end else begin
+                            S <= S << 1;
+                            shift_counter <= shift_counter + 1;
+                            exp_out <= exp_out - 1;
+                            state <= SHIFT_SUM;
+                        end
+                        
+                    end
                 
                 end
+                SET_R_S: begin 
+                    if (right_shift_flag) begin
+                        // r bit has been set in the previous step
+                        sticky_bit <= g_bit | r_bit | sticky_bit;
+                        state <= ROUND;
+                    end else begin
+                        if (shift_counter == 0) begin
+                            {r_bit, sticky_bit} <= {g_bit, r_bit | sticky_bit};
+                            state <= ROUND;
+                        end else if (shift_counter == 1) begin
+                            state <= ROUND;
+                        end else begin
+                            r_bit <= 0;
+                            sticky_bit <= 0;
+                            state <= ROUND;
+                        end
+                    end
+                end
+                ROUND: begin    // Round to the nearest even number
+                    if (S[0] & r_bit | r_bit & sticky_bit) begin
+                        if (cout_round) begin
+                            S <= {1'b1, s_plus_1[23:1]};
+                            exp_out <= exp_out + 1;
+                            state <= COMPUTE_SIGN;
+                        end else begin
+                            S <= s_plus_1;
+                            state <= COMPUTE_SIGN;
+                        end
+                    end else begin
+                        state <= COMPUTE_SIGN;
+                    end
             
+                end
+                COMPUTE_SIGN: begin 
+                    mant_out <= S[22:0];
+                    
+                    if (sign_greater == sign_smaller) begin
+                        sign_out <= sign_greater;
+                    end else begin
+                        if (swap_flag) begin
+                            sign_out <= sign_greater;                 
+                        end else begin
+                            if (complement_flag) begin
+                                sign_out <= sign_greater;
+                            end else begin
+                                sign_out <= sign_smaller;
+                            end
+                        end
+                    end
+                    
+                    done <= 1;
+                    state <= IDLE;
+                end
+                
             
+                default: state <= IDLE;
             endcase
         end
     
