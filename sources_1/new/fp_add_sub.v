@@ -138,7 +138,7 @@ module fp_add_sub(
                             mant_smaller <= {1'b1, a2[22:0]};
                             swap_flag <=0;
                             
-                        end else begin                     // exp1 < exp2
+                        end else begin                     // exp1 =< exp2
 
                             sign_greater <= a2[31];
                             exp_greater <= a2[30:23];
@@ -152,32 +152,28 @@ module fp_add_sub(
                             
                             swap_flag <=1;
                         end
-                        state <= SIGN_1; // TODO  change to SHIFT
+                        state <= SHIFT; // TODO  change to SHIFT
                 end
-                // CHANGE THE ORDER OF SHIFTING (do this first) and COMPLEMENTING (do this second)
-                // *********************************
-                // *******************************
-                // ******************************
+               
+                
+                SHIFT: begin                  
+                    mant_shifted <= mant_smaller >> (exp_greater - exp_smaller);
+                    
+                    overflow <= (mant_smaller & ((1 << (exp_greater - exp_smaller)) - 1)) << (24-(exp_greater - exp_smaller));
+                    state <= SIGN_1; // TODO Change to SIGN_1
+                end
+                
                 SIGN_1: begin                                   
                     if (sign_greater != sign_smaller) begin
-                        mant_smaller <= ~mant_smaller + 1'b1;
+                        {mant_shifted, overflow} <= ~{mant_shifted, overflow} + 1'b1;
                         sign_1_flag <=1;
                     end else begin
                         sign_1_flag <=0;
                     end
-                    state <= SHIFT;  // TODO Change to SUM
+                    state <= SUM; 
                 end
                 
-                SHIFT: begin
-                    // NEED TO FIND A WAY TO SHIFT IN 1s after the complement
-                    
-                    mant_shifted <= mant_smaller >> (exp_greater - exp_smaller);
-                    
-                    overflow <= (mant_smaller & ((1 << (exp_greater - exp_smaller)) - 1)) << (24-(exp_greater - exp_smaller));
-                    state <= SUM; // TODO Change to SIGN_1
-                end
-                
-                SUM: begin  // WILL BE REPLACED WITH THE CLA TREE ADDER
+                SUM: begin  
                     g_bit <= overflow[23];
                     r_bit <= overflow[22];
                     sticky_bit <= | overflow[21:0];
@@ -267,9 +263,9 @@ module fp_add_sub(
                             sign_out <= sign_greater;                 
                         end else begin
                             if (complement_flag) begin
-                                sign_out <= sign_greater;
-                            end else begin
                                 sign_out <= sign_smaller;
+                            end else begin
+                                sign_out <= sign_greater;
                             end
                         end
                     end
