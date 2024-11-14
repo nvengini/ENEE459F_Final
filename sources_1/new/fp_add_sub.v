@@ -77,11 +77,11 @@ module fp_add_sub(
     
     wire [23:0] sum_prelim;
     wire cout;
-    CLA_tree_24_bit adder1(.a(mant_greater), .b(mant_shifted), .cin(0), .sum(sum_prelim), .cout(cout));
+    CLA_tree_24_bit adder1(.a(mant_greater), .b(mant_shifted), .cin(1'b0), .sum(sum_prelim), .cout(cout));
     
     wire [23:0] s_plus_1;
     wire cout_round;
-    CLA_tree_24_bit adder2(.a(S), .b(24'h000001), .cin(0), .sum(s_plus_1), .cout(cout_round));
+    CLA_tree_24_bit adder2(.a(S), .b(24'h000001), .cin(1'b0), .sum(s_plus_1), .cout(cout_round));
     
     assign result = {sign_out, exp_out, mant_out};
     
