@@ -36,7 +36,8 @@ module PmodOLEDCtrl(
     input CLK,
     input RST,
     input EN,
-    input [3:0] SW, // 4-bit switch input
+    // input [3:0] SW, // 4-bit switch input
+    input [7:0] data_in,
     output CS,
     output SDIN,
     output SCLK,
@@ -263,6 +264,25 @@ localparam [127:0] PAGE0_TEXT = {8'h45, 8'h4E, 8'h45, 8'h45, 8'h34, 8'h35, 8'h39
 localparam [127:0] PAGE1_TEXT = {8'h4F, 8'h4C, 8'h45, 8'h44, 8'h20, 8'h54, 8'h45, 8'h53, 8'h54, 8'h20, 8'h20, 8'h20, 8'h20, 8'h20, 8'h20, 8'h20}; // "OLED TEST       "
 localparam [127:0] PAGE2_TEXT = {8'h42, 8'h79, 8'h20, 8'h59, 8'h6F, 8'h75, 8'h72, 8'h4E, 8'h61, 8'h6D, 8'h65, 8'h20, 8'h20, 8'h20, 8'h20, 8'h20}; // "By YourName        "
 localparam [127:0] PAGE3_TEXT_BASE = {8'h53, 8'h75, 8'h63, 8'h63, 8'h65, 8'h73, 8'h73, 8'h21, 8'h21, 8'h20, 8'h20, 8'h20, 8'h20, 8'h20, 8'h20, 8'h20}; // "Success!!       "
+    
+    function [15:0] convert_to_ascii_hex; // NSV Changed
+        input [7:0] bin;
+        reg [7:0] upper_nibble_ascii;
+        reg [7:0] lower_nibble_ascii;
+        begin
+            if (bin[7:4] < 4'd10)
+                upper_nibble_ascii = 8'h30 + bin[7:4];
+            else
+                upper_nibble_ascii = 8'h37 + bin[7:4];
+            
+            if (bin[3:0] < 4'd10)
+                lower_nibble_ascii = 8'h30 + bin[3:0];
+            else
+                lower_nibble_ascii = 8'h37 + bin[3:0];
+            
+            convert_to_ascii_hex = {upper_nibble_ascii, lower_nibble_ascii};
+        end
+    endfunction
     // State Machine
     always @(posedge CLK) begin
         if (RST == 1'b1) begin
@@ -285,10 +305,10 @@ localparam [127:0] PAGE3_TEXT_BASE = {8'h53, 8'h75, 8'h63, 8'h63, 8'h65, 8'h73, 
                 "OledReady" : begin
                     if(EN == 1'b1) begin
                         // Update pages based on switch status
-                        Page0_reg <= SW[0] ? PAGE0_TEXT : 128'h00000000000000000000000000000000;
-                        Page1_reg <= SW[1] ? PAGE1_TEXT : 128'h00000000000000000000000000000000;
-                        Page2_reg <= SW[2] ? PAGE2_TEXT : 128'h00000000000000000000000000000000;
-                        Page3_reg <= SW[3] ? {PAGE3_TEXT_BASE[127:40], SW[0] ? "1" : "0", PAGE3_TEXT_BASE[31:0]} : 128'h00000000000000000000000000000000;
+                        Page0_reg <= {data_in, 112'h000000000000000000000000000000};
+                        Page1_reg <= 128'h00000000000000000000000000000000;
+                        Page2_reg <= 128'h00000000000000000000000000000000;
+                        Page3_reg <= 128'h00000000000000000000000000000000;
                         current_state <= "OledDisplay";
                     end
                 end
@@ -298,9 +318,10 @@ localparam [127:0] PAGE3_TEXT_BASE = {8'h53, 8'h75, 8'h63, 8'h63, 8'h65, 8'h73, 
                     end
                 end
                 "Done" : begin
-                    if(EN == 1'b0) begin
-                        current_state <= "OledReady";
-                    end
+//                    if(EN == 1'b0) begin          // NSV Changed
+//                        current_state <= "OledReady";
+//                    end
+                    current_state <= "OledReady";
                 end
                 default : current_state <= "Idle";
             endcase
