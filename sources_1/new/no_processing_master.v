@@ -68,7 +68,7 @@ module no_processing_master(
 		.rst(reset), 
 		.addr(addr), 
 		.data_in(rec_data), // Change to UART output
-		.enable(btn_tick), // controlled by state machine
+		.enable(btn), // controlled by state machine
 		.rw(rw), 
 		.data_out(data_out), // unused
 		.ready(ready), // map to LED?
