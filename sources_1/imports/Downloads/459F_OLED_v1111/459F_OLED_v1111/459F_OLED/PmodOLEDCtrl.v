@@ -71,8 +71,8 @@ module PmodOLEDCtrl(
 	// ===========================================================================
 	// 							  Parameters, Regsiters, and Wires
 	// ===========================================================================
-	wire CS, SDIN, SCLK, DC;
-	wire VDD, VBAT, RES;
+	// wire CS, SDIN, SCLK, DC;
+	// wire VDD, VBAT, RES;
 	reg[127:0] Page0_reg, Page1_reg, Page2_reg, Page3_reg;
     
 	reg [110:0] current_state = "Idle";
@@ -306,7 +306,7 @@ localparam [127:0] PAGE3_TEXT_BASE = {8'h53, 8'h75, 8'h63, 8'h63, 8'h65, 8'h73, 
                     if(EN == 1'b1) begin
                         // Update pages based on switch status
                         Page0_reg <= {data_in, 112'h000000000000000000000000000000};
-                        Page1_reg <= 128'h00000000000000000000000000000000;
+                        Page1_reg <= PAGE1_TEXT;
                         Page2_reg <= 128'h00000000000000000000000000000000;
                         Page3_reg <= 128'h00000000000000000000000000000000;
                         current_state <= "OledDisplay";

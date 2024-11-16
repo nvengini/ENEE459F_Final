@@ -100,7 +100,7 @@ module i2c_slave_controller(
             IDLE: begin
                 if (start == 1) begin
                     state <= READ_ADDR;
-                    rx_addr[7] = i2c_sda;
+                    rx_addr[7] <= i2c_sda; // NSV changed
                 end
                 counter <= 6;
                 //waiting for start condition

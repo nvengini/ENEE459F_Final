@@ -23,6 +23,10 @@
 module no_processing_slave(
     input CLK,
     input RST,
+        
+    inout i2c_sda,
+    inout i2c_scl,
+    
     output CS,
     output SDIN,
     output SCLK,
@@ -31,11 +35,11 @@ module no_processing_slave(
     output VBAT,
     output VDD,
     output FIN,
-    
-    inout i2c_sda,
-    inout i2c_scl
-    
+    output [7:0] slave_data_output
     );
+    wire [7:0] slave_data_out;
+    
+    assign slave_data_output = slave_data_out;
     
     i2c_slave_controller slave (
         .i2c_sda(i2c_sda), 

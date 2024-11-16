@@ -126,7 +126,57 @@ module fp_add_sub(
                     end 
                 end
                 SWAP: begin
-                        if (a1[30:23] > a2[30:23] ) begin // exp1 > exp2
+                        if (a1[30:22] == 9'b111111111 || a2[30:22] == 9'b111111111) begin // NaN case
+                            {sign_out, exp_out, mant_out} <= 32'b0_11111111_10000000000000000000000;
+                            done <= 1;
+                            state <= IDLE;
+                        end else if (a1 == 32'b0_11111111_00000000000000000000000) begin 
+                            if (a2 == 32'b1_11111111_00000000000000000000000) begin // +inf - inf
+                                {sign_out, exp_out, mant_out} <= 32'b0_11111111_10000000000000000000000; // NaN
+                                done <= 1;
+                                state <= IDLE;
+                            end else begin
+                                {sign_out, exp_out, mant_out} <= 32'b0_11111111_00000000000000000000000; // + infinity
+                                done <= 1;
+                                state <= IDLE;
+                            
+                            end
+                        
+                        end else if (a2 == 32'b0_11111111_00000000000000000000000) begin 
+                            if (a1 == 32'b1_11111111_00000000000000000000000) begin // -inf + inf
+                                {sign_out, exp_out, mant_out} <= 32'b0_11111111_10000000000000000000000; // NaN
+                                done <= 1;
+                                state <= IDLE;
+                            end else begin
+                                {sign_out, exp_out, mant_out} <= 32'b0_11111111_00000000000000000000000; // + infinity
+                                done <= 1;
+                                state <= IDLE;
+                            
+                            end
+                        end else if (a1 == 32'b1_11111111_00000000000000000000000) begin // a1 = - infinity
+                            if (a2 == 32'b0_11111111_00000000000000000000000) begin // -inf + inf
+                                {sign_out, exp_out, mant_out} <= 32'b0_11111111_10000000000000000000000; // NaN
+                                done <= 1;
+                                state <= IDLE;
+                            end else begin
+                                {sign_out, exp_out, mant_out} <= 32'b1_11111111_00000000000000000000000; // - Infinity
+                                done <= 1;
+                                state <= IDLE;
+                            
+                            end
+                        
+                        end else if (a2 == 32'b1_11111111_00000000000000000000000) begin 
+                            if (a1 == 32'b0_11111111_00000000000000000000000) begin // +inf + inf
+                                {sign_out, exp_out, mant_out} <= 32'b0_11111111_10000000000000000000000; // NaN
+                                done <= 1;
+                                state <= IDLE;
+                            end else begin
+                                {sign_out, exp_out, mant_out} <= 32'b1_11111111_00000000000000000000000; // - Infinity
+                                done <= 1;
+                                state <= IDLE;
+                            
+                            end
+                        end else if (a1[30:23] > a2[30:23] ) begin // exp1 > exp2
                             // input_greater <= a1;
                             sign_greater <= a1[31];
                             exp_greater <= a1[30:23];
