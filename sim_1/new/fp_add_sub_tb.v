@@ -141,6 +141,62 @@ module fp_add_sub_tb(
         reset = 0;
         #10
         
+        // 32'b0_11111111_00000000000000000000000
+        
+        in1 = 32'b0_11111111_10000000000000000000000; // NaN
+        in2 = 32'b0_01111111_11000000000000000000000; // 1.75        
+        // Expected result --> NaN
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
+        
+        in1 = 32'b0_11111111_00000000000000000000000; // + infinity
+        in2 = 32'b0_01111111_11000000000000000000000; // 1.75  
+        // Expected result --> + infinity
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
+        
+        
+        in1 = 32'b1_11111111_00000000000000000000000; // - infinity
+        in2 = 32'b0_01111111_11000000000000000000000; // 1.75  
+        // Expected result (after rounding): - infinity
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
+        
+        
+        in1 = 32'b1_11111111_00000000000000000000000; // - infinity
+        in2 = 32'b0_11111111_00000000000000000000000; // + infinity 
+        // Expected result (after rounding): NaN
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
+        
         
         $finish;
     end
