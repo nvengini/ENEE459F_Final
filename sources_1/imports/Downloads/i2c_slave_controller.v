@@ -23,8 +23,9 @@
 module i2c_slave_controller(
     inout i2c_sda,
     inout i2c_scl,
-    output [7:0] dataout,
-    output [3:0] state_out
+    output [31:0] dataout,
+    output [3:0] state_out,
+    output rx_done
     );
     
     localparam ADDRESS = 7'b0101010; // Slave Address
@@ -42,18 +43,21 @@ module i2c_slave_controller(
     //reg start2 = 1'b0;
     //assign start = start1 | start2;
         
-    reg [2:0] counter = 3'b111;
+    reg [4:0] counter = 5'b00111;
     reg [2:0] state = IDLE;
     reg [7:0] rx_addr = 8'b00000000;
-    reg [7:0] data_in = 8'b00000000;
+    reg [31:0] data_in = 32'b00000000;
     
     
     reg write_enable; //0
     reg sda_out;
     assign i2c_sda = (write_enable == 1) ? sda_out : 1'bz;
     
-    reg [7:0] data_out_intermediate;
+    reg [31:0] data_out_intermediate;
     assign dataout = data_out_intermediate;
+   
+    reg rx_done_flag = 0;
+    assign rx_done = rx_done_flag;
    
     assign state_out = state;
     
@@ -102,11 +106,12 @@ module i2c_slave_controller(
                     state <= READ_ADDR;
                     rx_addr[7] <= i2c_sda; // NSV changed
                 end
-                counter <= 6;
+                counter <= 5'b00110;
                 //waiting for start condition
             end
             
             READ_ADDR: begin
+                rx_done_flag <= 0;
                 rx_addr[counter] = i2c_sda;
                 if (counter == 0) begin
                     if (rx_addr[7:1] == ADDRESS) begin
@@ -120,7 +125,7 @@ module i2c_slave_controller(
              
             SEND_ACK: begin
                 state <= READ_DATA;
-                counter = 3'b111;
+                counter = 5'b11111;
             end
             
             READ_DATA: begin
@@ -133,8 +138,9 @@ module i2c_slave_controller(
             
             SEND_ACK2: begin
                 data_out_intermediate <= data_in;
+                rx_done_flag <= 1;
                 state <= IDLE;
-                counter <= 3'b110; //because of bs
+                counter <= 5'b00110; // this just works
             end
         endcase
     end        
