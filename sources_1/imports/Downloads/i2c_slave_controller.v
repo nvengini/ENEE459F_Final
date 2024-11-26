@@ -24,8 +24,9 @@ module i2c_slave_controller(
     inout i2c_sda,
     inout i2c_scl,
     output [31:0] dataout,
-    output [3:0] state_out,
-    output rx_done
+    output [2:0] state_out,
+    output rx_done,
+    output start_out
     );
     
     localparam ADDRESS = 7'b0101010; // Slave Address
@@ -36,8 +37,8 @@ module i2c_slave_controller(
     localparam READ_DATA = 3;
     localparam SEND_ACK2 = 4;
 
-    reg start = 1'b0;//0
-    
+    reg start = 1'b1;//0
+    assign start_out = start;
     //wire start;
     //reg start1 = 1'b0;
     //reg start2 = 1'b0;
@@ -49,7 +50,7 @@ module i2c_slave_controller(
     reg [31:0] data_in = 32'b00000000;
     
     
-    reg write_enable; //0
+    reg write_enable = 1'b0; //0
     reg sda_out;
     assign i2c_sda = (write_enable == 1) ? sda_out : 1'bz;
     
@@ -61,13 +62,18 @@ module i2c_slave_controller(
    
     assign state_out = state;
     
-    always @(negedge i2c_sda) begin
-        if ((start == 0) && (i2c_scl == 1)) begin
-            start <= 1;
-        end else if (state == IDLE) begin
-            start <= 0;
-        end
-     end    
+    
+    
+//    always @(negedge i2c_sda) begin
+//        if ((start == 0) && (i2c_scl == 1)) begin
+//            start <= 1;
+//        end else if (state == READ_ADDR) begin
+//            start <= 0;
+//        end /* else begin
+//            start <= 0;
+//        end */ 
+//     end    
+
      
      always @(negedge i2c_scl) begin
         
@@ -112,7 +118,7 @@ module i2c_slave_controller(
             
             READ_ADDR: begin
                 rx_done_flag <= 0;
-                rx_addr[counter] = i2c_sda;
+                rx_addr[counter] <= i2c_sda;
                 if (counter == 0) begin
                     if (rx_addr[7:1] == ADDRESS) begin
                         rx_addr <= 8'b00000000;

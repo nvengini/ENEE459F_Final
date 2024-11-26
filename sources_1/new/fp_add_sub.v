@@ -43,6 +43,7 @@ module fp_add_sub(
                
     reg [4:0] state = IDLE;
     reg [7:0] exp_out; // 8 bit exponent
+    reg [7:0] exp_intermediate;
     reg sign_out;
     reg [22:0] mant_out;
     
@@ -102,7 +103,7 @@ module fp_add_sub(
             mant_shifted <= 0;
             overflow <= 0;
             S <= 0;
-            
+            exp_intermediate <= 0;
             g_bit<=0;
             r_bit<=0;
             sticky_bit<=0;
@@ -122,7 +123,8 @@ module fp_add_sub(
             case (state)
                 IDLE: begin
                     if (start) begin
-                        state <= SWAP;                      
+                        state <= SWAP;
+                        done <= 0;                      
                     end 
                 end
                 SWAP: begin
@@ -180,25 +182,47 @@ module fp_add_sub(
                             // input_greater <= a1;
                             sign_greater <= a1[31];
                             exp_greater <= a1[30:23];
-                            mant_greater <= {1'b1, a1[22:0]};
-                            exp_out <= a1[30:23];
+                            
+                            if (a1[30:23] == 8'b0000_0000) begin
+                                mant_greater <= {a1[22:0], 1'b0}; // checks for denormalized number
+                            end else begin
+                                mant_greater <= {1'b1, a1[22:0]};
+                            end
+                            exp_intermediate <= a1[30:23];
                             // input_smaller <= a2;
                             sign_smaller <= a2[31];
                             exp_smaller <= a2[30:23];
-                            mant_smaller <= {1'b1, a2[22:0]};
+                            
+                            if (a2[30:23] == 8'b0000_0000) begin
+                                mant_smaller <= {a2[22:0], 1'b0}; // checks for denormalized number
+                            end else begin
+                                mant_smaller <= {1'b1, a2[22:0]};
+                            end
+                            
                             swap_flag <=0;
                             
                         end else begin                     // exp1 =< exp2
 
                             sign_greater <= a2[31];
                             exp_greater <= a2[30:23];
-                            mant_greater <= {1'b1, a2[22:0]};
+                            
+                            if (a2[30:23] == 8'b0000_0000) begin
+                                mant_greater <= {a2[22:0], 1'b0}; // checks for denormalized number
+                            end else begin
+                                mant_greater <= {1'b1, a2[22:0]};
+                            end
                                                        
-                            exp_out <= a2[30:23];
+                            exp_intermediate <= a2[30:23];
                             
                             sign_smaller <= a1[31];
                             exp_smaller <= a1[30:23];
-                            mant_smaller <= {1'b1, a1[22:0]};
+                            
+                            if (a2[30:23] == 8'b0000_0000) begin
+                                mant_smaller <= {a1[22:0], 1'b0}; // checks for denormalized number
+                            end else begin
+                                mant_smaller <= {1'b1, a1[22:0]};
+                            end
+                            
                             
                             swap_flag <=1;
                         end
@@ -245,7 +269,18 @@ module fp_add_sub(
                 SHIFT_SUM: begin 
                     if ((sign_greater == sign_smaller) && cout == 1) begin // Right shift
                         {S, r_bit} <= {1'b1, S[23:0]}; // Fill in carry_out bit
-                        exp_out <= exp_out + 1;
+                        
+                        if (exp_intermediate == 8'b1111_1110) begin // check overflow
+                            // Set to infinity
+                            sign_out <= sign_greater;
+                            mant_out <= 23'b0000_0000_0000_0000_0000_000;
+                            exp_out <= 8'b1111_1111;
+                            done <= 1;
+                            state <= IDLE;
+                        end else begin
+                            exp_intermediate <= exp_intermediate + 1; 
+                        end
+                        
                         state <= SET_R_S;
                         right_shift_flag <= 1;
     
@@ -256,15 +291,25 @@ module fp_add_sub(
                         right_shift_flag <= 0;
                         
                         if (shift_counter == 0) begin
-                            S <= {S[22:0], g_bit};
-                            shift_counter <= shift_counter + 1;
-                            exp_out <= exp_out - 1;
-                            state <= SHIFT_SUM;
+                            
+                            if (exp_intermediate == 8'b0000_0000) begin
+                                state <= SET_R_S;
+                            end else begin
+                                S <= {S[22:0], g_bit};
+                                shift_counter <= shift_counter + 1;
+                                exp_intermediate <= exp_intermediate - 1;
+                                state <= SHIFT_SUM;
+                            end
+                            
                         end else begin
-                            S <= S << 1;
-                            shift_counter <= shift_counter + 1;
-                            exp_out <= exp_out - 1;
-                            state <= SHIFT_SUM;
+                            if (exp_intermediate == 8'b0000_0000) begin
+                                state <= SET_R_S;
+                            end else begin
+                                S <= S << 1;
+                                shift_counter <= shift_counter + 1;
+                                exp_intermediate <= exp_intermediate - 1;
+                                state <= SHIFT_SUM;
+                            end
                         end
                         
                     end
@@ -292,7 +337,19 @@ module fp_add_sub(
                     if (S[0] & r_bit | r_bit & sticky_bit) begin
                         if (cout_round) begin
                             S <= {1'b1, s_plus_1[23:1]};
-                            exp_out <= exp_out + 1;
+                            
+                            if (exp_intermediate == 8'b1111_1110) begin // check overflow
+                                // Set to infinity
+                                sign_out <= sign_greater;
+                                mant_out <= 23'b0000_0000_0000_0000_0000_000;
+                                exp_out <= 8'b1111_1111;
+                                done <= 1;
+                                state <= IDLE;
+                            end else begin
+                                exp_intermediate <= exp_intermediate + 1; 
+                            end
+                            
+//                            exp_intermediate <= exp_intermediate + 1;
                             state <= COMPUTE_SIGN;
                         end else begin
                             S <= s_plus_1;
@@ -305,6 +362,7 @@ module fp_add_sub(
                 end
                 COMPUTE_SIGN: begin 
                     mant_out <= S[22:0];
+                    exp_out <= exp_intermediate;
                     
                     if (sign_greater == sign_smaller) begin
                         sign_out <= sign_greater;
