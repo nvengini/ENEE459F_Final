@@ -23,7 +23,7 @@
 module fp_multiplier(
         input [31:0] num1,
         input [31:0] num2,
-        output [31:0] final_product
+        output [47:0/*31:0*/] final_product //changed for mantissa checks
     );
   
   
@@ -204,7 +204,8 @@ module fp_multiplier(
     assign init_prod[5] = s40[0];
     assign init_prod[6] = s50[0];
     assign init_prod[7] = s60[0];
-    
+  
+  /* Currently remove everything that wasn't raw mantissa  
     wire [45:0] init_mant = init_prod[45:0];
     wire check_bit = init_mant[45];
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -231,6 +232,8 @@ module fp_multiplier(
     
     //cpa_block round_product ( .a(product[45:8]), .b(rounding), .sum(rounded_product));
     //assign final_product[22:0] = rounded_product[37:15];
+    */
     
+    assign final_product = init_prod;
     
 endmodule
