@@ -23,7 +23,7 @@
 module fp_multiplier(
         input [31:0] num1,
         input [31:0] num2,
-        output [47:0/*31:0*/] final_product //changed for mantissa checks
+        output [31:0] final_product //changed for mantissa checks
     );
   
   
@@ -118,7 +118,7 @@ module fp_multiplier(
     wire [25:0] s01p = {a_and_b5[23], s01, a_and_b3[0]};
     
     csa_block #(24) csa02 ( .x({1'b0, a_and_b6[23:1]}), .y(a_and_b7), .z({a_and_b8[22:0], 1'b0}), .s(s02), .c(c02));
-    wire [25:0] s02p = {a_and_b8[23], s02, a_and_b5[0]};
+    wire [25:0] s02p = {a_and_b8[23], s02, a_and_b6[0]};
     
     csa_block #(24) csa03 ( .x({1'b0, a_and_b9[23:1]}), .y(a_and_b10), .z({a_and_b11[22:0], 1'b0}), .s(s03), .c(c03));
     wire [25:0] s03p = {a_and_b11[23], s03, a_and_b9[0]};
@@ -205,35 +205,33 @@ module fp_multiplier(
     assign init_prod[6] = s50[0];
     assign init_prod[7] = s60[0];
   
-  /* Currently remove everything that wasn't raw mantissa  
-    wire [45:0] init_mant = init_prod[45:0];
-    wire check_bit = init_mant[45];
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-     
-    //turn into 8 bit adder!!!
-    wire [7:0] final_exp;// = num1[30:23] + num2[30:23] - 8'b01111111;
     
+    wire check_bit = init_prod[47];
+    
+    //if check_bit is 0, shift the mantissa left 1 bit (shift left by not check_bit)
+    wire [47:0] init_mant = (init_prod[47:0] << ~check_bit);
+    
+    //if check_bit is 1, add 1 to the exponent (add check bit to the exponent)
+    wire [7:0] init_exp = num1[30:23] + num2[30:23] - {8'b01111111} + {7'b0000000, check_bit};
+    //ALSO shift our mantissa to the right by 1
+     
+     
+    wire [7:0] final_exp;
     
     wire final_signed = num1[31] ^ num2[31];
     
-    assign final_exp = num1[30:23] + num2[30:23] - {7'b0111111, ~check_bit};
+    //check for special cases of -inf, inf, 0, and NAN
+    //currently just does NAN/inf as the same
+    assign final_exp = (num1[30:23] == 8'b00000000 || num2[30:23] == 8'b00000000) ? 8'b00000000 : ((num1[30:23] == 8'b11111111 || num2[30:23] == 8'b11111111) ? 8'b11111111:init_exp);
     
-    wire [45:0] final_mant = (init_mant << ~(check_bit)); //shifts by 0 if nothing
-
+    wire [47:0] final_mant;
+    assign final_mant = (final_exp == 8'b00000000 || final_exp == 8'b11111111) ? 23'd0 : init_mant[47:0];
+    
+    
     assign final_product[31] = final_signed;
     assign final_product[30:23] = final_exp;
-    assign final_product[22:0] = final_mant[45:23];
-
-    //rounding using the 38 bit cpa block.
-    //wire [37:0] rounding;
-    //assign rounding = {22'b0, product[22], 15'b0}; //put the rounding bit at the proper location
-    //wire [37:0] rounded_product;
-    
-    
-    //cpa_block round_product ( .a(product[45:8]), .b(rounding), .sum(rounded_product));
-    //assign final_product[22:0] = rounded_product[37:15];
-    */
-    
-    assign final_product = init_prod;
-    
+    assign final_product[22:0] = final_mant[46:24] + {22'd0, final_mant[23]}; //changed from 45:23, since we only drop the top bit
+    //added for rounding
 endmodule
+
