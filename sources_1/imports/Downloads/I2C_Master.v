@@ -6,7 +6,7 @@ module i2c_master_controller
 	input wire clk,
 	input wire rst,
 	input wire [6:0] addr,
-	input wire [7:0] data_in,
+	input wire [31:0] data_in,
 	input wire enable,
 	input wire rw,
 
@@ -27,13 +27,13 @@ module i2c_master_controller
 	localparam READ_ACK2 = 7;
 	localparam STOP = 8;
 	
-	localparam DIVIDE_BY = 4000;//4;
+	localparam DIVIDE_BY = 4; //000;//4;
 
 	reg [7:0] state;
 	reg [7:0] saved_addr;
-	reg [7:0] saved_data;
+	reg [31:0] saved_data;
 	reg [7:0] counter;
-	reg /*[7:0]*/[16:0] counter2 = 0;
+	reg /*[7:0]*/[15:0] counter2 = 0;
 	reg write_enable;
 	reg sda_out;
 	reg i2c_scl_enable = 0;
@@ -41,7 +41,7 @@ module i2c_master_controller
 
 	assign ready = ((rst == 0) && (state == IDLE)) ? 1 : 0;
 	assign i2c_scl = (i2c_scl_enable == 0 ) ? 1 : i2c_clk;
-	assign i2c_sda = (write_enable == 1) ? sda_out : 'bz;
+	assign i2c_sda = (write_enable == 1) ? sda_out : 1'bz;
 	
 	always @(posedge clk) begin
 		if (counter2 == (DIVIDE_BY/2) - 1) begin
@@ -94,7 +94,7 @@ module i2c_master_controller
 
 				READ_ACK: begin
 					if (i2c_sda == 0) begin
-						counter <= 7;
+						counter <= 31;
 						if(saved_addr[0] == 0) state <= WRITE_DATA;
 						else state <= READ_DATA;
 					end else state <= STOP;
@@ -145,6 +145,9 @@ module i2c_master_controller
 				end
 				
 				READ_ACK: begin
+					write_enable <= 0;
+				end
+				READ_ACK2: begin
 					write_enable <= 0;
 				end
 				

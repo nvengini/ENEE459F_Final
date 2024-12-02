@@ -197,6 +197,62 @@ module fp_add_sub_tb(
         reset = 0;
         #10
         
+        // 7f7ff800 + 7f7ff800 (should give overflow)
+        in1 = 32'b0_11111110_11111111111100000000000; 
+        in2 = 32'b0_11111110_11111111111100000000000; 
+        // Expected result (after rounding): +Inf
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
+        
+        
+        // ff7ff800 + ff7ff800 (should give negative overflow)
+        in1 = 32'b1_11111110_11111111111100000000000; 
+        in2 = 32'b1_11111110_11111111111100000000000; 
+        // Expected result (after rounding): -Inf
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
+        
+        
+        // 00780000 + 00780000 (two underflows should give a non underflow answer
+        // = 00f00000
+        
+        in1 = 32'b0_00000000_11110000000000000000000; 
+        in2 = 32'b0_00000000_11110000000000000000000; 
+        // Expected result (after rounding): 00f00001
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
+        
+               
+        in1 = 32'b0_01111111_11000000000000000000000; // +1.75
+        in2 = 32'b0_10000000_10100000000000000000000; // +3.25
+        start=1;
+        #10;
+//        start=0;
+        wait(done);
+        #100
+        start = 0;
+        
         
         $finish;
     end
