@@ -1,0 +1,76 @@
+set_property IOSTANDARD LVCMOS33 [get_ports CLK]
+set_property IOSTANDARD LVCMOS33 [get_ports RST]
+# set_property IOSTANDARD LVCMOS18 [get_ports EN]
+set_property IOSTANDARD LVCMOS33 [get_ports CS]
+set_property IOSTANDARD LVCMOS33 [get_ports SDIN]
+set_property IOSTANDARD LVCMOS33 [get_ports SCLK]
+set_property IOSTANDARD LVCMOS33 [get_ports DC]
+set_property IOSTANDARD LVCMOS33 [get_ports RES]
+set_property IOSTANDARD LVCMOS33 [get_ports VBAT]
+set_property IOSTANDARD LVCMOS33 [get_ports VDD]
+set_property IOSTANDARD LVCMOS33 [get_ports FIN]
+
+set_property PACKAGE_PIN W5 [get_ports CLK]
+set_property PACKAGE_PIN U18 [get_ports RST]
+# set_property PACKAGE_PIN W19 [get_ports EN]
+set_property PACKAGE_PIN A14 [get_ports CS]
+set_property PACKAGE_PIN A16 [get_ports SDIN]
+set_property PACKAGE_PIN B16 [get_ports SCLK]
+set_property PACKAGE_PIN A15 [get_ports DC]
+set_property PACKAGE_PIN A17 [get_ports RES]
+set_property PACKAGE_PIN C15 [get_ports VBAT]
+set_property PACKAGE_PIN C16 [get_ports VDD]
+set_property PACKAGE_PIN L1 [get_ports FIN]
+
+
+# I2C Ports
+set_property IOSTANDARD LVCMOS33 [get_ports i2c_sda]
+set_property IOSTANDARD LVCMOS33 [get_ports i2c_scl]
+set_property PACKAGE_PIN N17 [get_ports i2c_sda]
+set_property PACKAGE_PIN M18 [get_ports i2c_scl]
+# J1 = I2C CLK
+# L2 = I2C SDA
+
+
+
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_data_output[0]}]
+set_property PACKAGE_PIN J1 [get_ports {slave_data_output[0]}]
+set_property PACKAGE_PIN L2 [get_ports {slave_data_output[1]}]
+set_property PACKAGE_PIN J2 [get_ports {slave_data_output[2]}]
+set_property PACKAGE_PIN G2 [get_ports {slave_data_output[3]}]
+set_property PACKAGE_PIN H1 [get_ports {slave_data_output[4]}]
+set_property PACKAGE_PIN K2 [get_ports {slave_data_output[5]}]
+set_property PACKAGE_PIN H2 [get_ports {slave_data_output[6]}]
+set_property PACKAGE_PIN G3 [get_ports {slave_data_output[7]}]
+
+set_property IOSTANDARD LVCMOS33 [get_ports {cnt[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {cnt[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {state_out[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {state_out[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {state_out[0]}]
+set_property PACKAGE_PIN J3 [get_ports {cnt[1]}]
+set_property PACKAGE_PIN L3 [get_ports {cnt[0]}]
+set_property PACKAGE_PIN M2 [get_ports {state_out[2]}]
+set_property PACKAGE_PIN N2 [get_ports {state_out[1]}]
+set_property PACKAGE_PIN K3 [get_ports {state_out[0]}]
+
+
+set_property IOSTANDARD LVCMOS33 [get_ports rx_done_out]
+set_property PACKAGE_PIN M3 [get_ports rx_done_out]
+
+
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_state_out[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_state_out[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {slave_state_out[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports start_out]
+set_property PACKAGE_PIN L17 [get_ports {slave_state_out[2]}]
+set_property PACKAGE_PIN M19 [get_ports {slave_state_out[1]}]
+set_property PACKAGE_PIN P17 [get_ports {slave_state_out[0]}]
+set_property PACKAGE_PIN R18 [get_ports start_out]
