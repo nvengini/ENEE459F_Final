@@ -34,6 +34,7 @@ module master_processing_fsm_top (
     localparam SEND_DATA1 = 8'd12;
     localparam SEND_DATA2 = 8'd13;
     localparam FINAL_WAIT = 8'd14;
+    localparam SEND_DATA3 = 8'd15; //RAJ New after working device
     
     reg [3:0] state = UART1;
     assign state_out = state;
@@ -65,9 +66,11 @@ module master_processing_fsm_top (
     
     reg start = 0; reg [31:0] posedge_ctr = 32'd0;
     wire done;
+    reg add_reset = 0;
     reg [31:0] input1 = 32'd0;
     reg [31:0] input2 = 32'd0;
     wire [31:0] result;
+    reg [31:0] adder_result; // RAJ Added after working module.
     
     // Complete UART Core
     uart_top UART_UNIT
@@ -96,13 +99,13 @@ module master_processing_fsm_top (
 	);
 	
 	// adder
-	fp_add_sub add_sub( .a1(input1), .a2(input2), .clk(state_clk), .start(start), .reset(reset), 
+	fp_add_sub add_sub( .a1(input1), .a2(input2), .clk(state_clk), .start(start), .reset(add_reset), 
                         .result(result), .done(done)    );
 	   
     // check if a message has been sent from the fifo & update ctr
     always @(posedge updated_rec_data) begin
         if(rx_ctr == 9) 
-            rx_ctr <= 0;
+            rx_ctr <= 1; // RAJ Changed after working model
         else
             rx_ctr <= rx_ctr + 1;
     end
@@ -131,8 +134,8 @@ module master_processing_fsm_top (
             
             UART2: begin
                 if(rx_ctr == 2) begin
-                    rx_buffer[15:8] <= rec_data;
-                    led_out <= rx_buffer[15:8];
+                    rx_buffer[71:64] <= rec_data;
+                    led_out <= rx_buffer[71:64];
                     state <= UART3;    
                 end else
                     state <= UART2;
@@ -140,8 +143,8 @@ module master_processing_fsm_top (
             
             UART3: begin
                 if(rx_ctr == 3) begin
-                    rx_buffer[23:16] <= rec_data;
-                    led_out <= rx_buffer[23:16];
+                    rx_buffer[63:56] <= rec_data;
+                    led_out <= rx_buffer[63:56];
                     state <= UART4;    
                 end else
                     state <= UART3;
@@ -149,8 +152,8 @@ module master_processing_fsm_top (
             
             UART4: begin
                 if(rx_ctr == 4) begin
-                    rx_buffer[31:24] <= rec_data;
-                    led_out <= rx_buffer[31:24];
+                    rx_buffer[55:48] <= rec_data;
+                    led_out <= rx_buffer[55:48];
                     state <= UART5;    
                 end else
                     state <= UART4;
@@ -158,8 +161,8 @@ module master_processing_fsm_top (
             
             UART5: begin
                 if(rx_ctr == 5) begin
-                    rx_buffer[39:32] <= rec_data;
-                    led_out <= rx_buffer[39:32];
+                    rx_buffer[47:40] <= rec_data;
+                    led_out <= rx_buffer[47:40];
                     state <= UART6;    
                 end else
                     state <= UART5;
@@ -167,8 +170,8 @@ module master_processing_fsm_top (
             
             UART6: begin
                 if(rx_ctr == 6) begin
-                    rx_buffer[47:40] <= rec_data;
-                    led_out <= rx_buffer[47:40];
+                    rx_buffer[39:32] <= rec_data;
+                    led_out <= rx_buffer[39:32];
                     state <= UART7;    
                 end else
                     state <= UART6;
@@ -176,8 +179,8 @@ module master_processing_fsm_top (
             
             UART7: begin
                 if(rx_ctr == 7) begin
-                    rx_buffer[55:48] <= rec_data;
-                    led_out <= rx_buffer[55:48];
+                    rx_buffer[31:24] <= rec_data;
+                    led_out <= rx_buffer[31:24];
                     state <= UART8;    
                 end else
                     state <= UART7;
@@ -185,8 +188,8 @@ module master_processing_fsm_top (
             
             UART8: begin
                 if(rx_ctr == 8) begin
-                    rx_buffer[63:56] <= rec_data;
-                    led_out <= rx_buffer[63:56];
+                    rx_buffer[23:16] <= rec_data;
+                    led_out <= rx_buffer[23:16];
                     state <= UART9;    
                 end else
                     state <= UART8;
@@ -194,8 +197,8 @@ module master_processing_fsm_top (
             
             UART9: begin
                 if(rx_ctr == 9) begin
-                    rx_buffer[71:64] <= rec_data;
-                    led_out <= rx_buffer[71:64];
+                    rx_buffer[15:8] <= rec_data;
+                    led_out <= rx_buffer[15:8];
                     //if add or sub
                     if(rx_buffer[1:0] == 1'b01 || rx_buffer[1:0] == 1'b00)
                         state <= START_ADD;
@@ -208,12 +211,12 @@ module master_processing_fsm_top (
             START_ADD: begin
                 if(rx_buffer[1:0] == 1'b00) begin //adding
                     //set the adder by updating the parameters
-                    input1 <= rx_buffer[39:8];
-                    input2 <= rx_buffer[71:40];
+                    input1 <= rx_buffer[71:40];
+                    input2 <= rx_buffer[39:8];
                 end else begin //subtraction
                     //set subtraction by flipping sign bit of 2nd input
-                    input1 <= rx_buffer[39:8];
-                    input2 <= {~rx_buffer[71], rx_buffer[70:40]};
+                    input1 <= rx_buffer[71:40];
+                    input2 <= {~rx_buffer[39], rx_buffer[38:8]};
                 end
                 start <= 1;
                 posedge_ctr <= 32'd4;
@@ -228,14 +231,16 @@ module master_processing_fsm_top (
                 end
                     
                 if(done) begin 
-                    rx_buffer[39:8] <= result;
-                    rx_buffer[71:40] <= 32'd0;
+                    //rx_buffer[39:8] <= result; RAJ Changed the next 3 lines
+                    //rx_buffer[71:40] <= 32'd0; // ^^
+                    adder_result <= result; // ^^
                     state <= SEND_OP;
                 end else
                     state <= WAIT_ADD;
             end
             
             SEND_OP: begin
+                add_reset <= 1;
                 // already sent i2c_data in last one. Now, wait for next done flag
                 if(ready) begin
                     i2c_input = {30'd0, rx_buffer[1:0]};
@@ -263,6 +268,7 @@ module master_processing_fsm_top (
             end
             
             SEND_DATA2: begin
+                add_reset <= 0;
                 if(posedge_ctr != 0) begin
                     posedge_ctr <= posedge_ctr - 1;
                 end else begin
@@ -273,20 +279,42 @@ module master_processing_fsm_top (
                         i2c_input = rx_buffer[71:40];
                         i2c_en = 1;
                         posedge_ctr = 32'd10;
-                        state = FINAL_WAIT;
+                        state = SEND_DATA3; //RAJ Changed after working model
                     end
                 end
             end
             
+/////////////// NEW STATE ADDED AFTER WORKING MODULE ///////////////////////
+            SEND_DATA3: begin
+                if(posedge_ctr != 0) begin
+                    posedge_ctr <= posedge_ctr - 1;
+                end else begin
+                    if(!ready) begin
+                        i2c_en = 0;
+                        state = SEND_DATA3;
+                    end else begin
+                        i2c_input = adder_result;
+                        i2c_en = 1;
+                        posedge_ctr = 32'd10;
+                        state = FINAL_WAIT;
+                    end
+                end
+            end
+
+/////////////////////////////////////////////////////////////////////////////////
+            
             FINAL_WAIT: begin
-            if(posedge_ctr != 0) begin
+                if(posedge_ctr != 0) begin
                     posedge_ctr <= posedge_ctr - 1;
                     state <= FINAL_WAIT;
                 end else begin
                     i2c_en = 0;
                     state <= UART1;
                 end
+                adder_result <= 32'd0; // RAJ Added after working model
             end
+            
+            
             
        endcase
     end
