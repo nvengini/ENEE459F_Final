@@ -252,6 +252,21 @@ module fp_add_sub_tb(
         wait(done);
         #100
         start = 0;
+        #20
+        
+        in1 = 32'h5f514a85; // 15081012537250021376
+        in2 = 32'h61ccd305; // 472292668844204359680
+        // Expected result (after rounding): 
+        // 61d35d59 --> 487373681381454381056
+        start=1;
+        #10;
+        start=0;
+        wait(done);
+        #20;
+        reset = 1;
+        #10;
+        reset = 0;
+        #10
         
         
         $finish;

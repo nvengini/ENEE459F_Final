@@ -38,6 +38,7 @@ module slave_processing_fsm_top(
     reg [31:0] opcode = 0;
     reg [31:0] operand1 = 0;
     reg [31:0] operand2 = 0;
+    wire [31:0] mult_out;
     // reg [31:0] OLED_data = 0;
     // reg [31:0] OLED_opcode_disp = 0;
     
@@ -56,7 +57,11 @@ module slave_processing_fsm_top(
     
     
     */
-    
+    fp_multiplier mult(
+        .num1(operand1),
+        .num2(operand2),
+        .final_product(mult_out)
+    );
     
     
     always @ (posedge done) begin
@@ -109,7 +114,7 @@ module slave_processing_fsm_top(
                     end
                     2'b10:  begin // MULT
                         OLED_opcode_disp <= {24'h4D_55_4C , 8'h00};
-                        OLED_data <= operand1 * operand2;
+                        OLED_data <= mult_out;
                     end
                     2'b11: begin // unused?
                         OLED_opcode_disp <= 32'h6E_6F_6F_70;
