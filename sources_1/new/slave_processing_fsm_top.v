@@ -25,24 +25,29 @@ module slave_processing_fsm_top(
     input [31:0] slave_data_rx,
     output [1:0] cnt,
     input clk,
-    output reg [31:0] OLED_data = 0,
+	output reg [31:0] OLED_A = 0,
+	output reg [31:0] OLED_B = 0,
+    output reg [31:0] OLED_result = 0,
     output reg [31:0] OLED_opcode_disp = 0,
     output [2:0] state_out
     );
     localparam RX1 = 3'd1,
                 RX2 = 3'd2,
                 RX3 = 3'd3,
-                DECODE = 3'd4;
+                DECODE = 3'd4,
+				RX4 = 3'd5; // NSV CHANGED FROM WORKING DEMO
+				
     reg [2:0] state = RX1;
-    reg [1:0] slave_rx_counter = 3;
+    reg [2:0] slave_rx_counter = 4; // NSV CHANGED FROM WORKING DEMO
     reg [31:0] opcode = 0;
     reg [31:0] operand1 = 0;
     reg [31:0] operand2 = 0;
+	reg [31:0] result = 0;			// NSV CHANGED FROM WORKING DEMO
     wire [31:0] mult_out;
-    // reg [31:0] OLED_data = 0;
+    // reg [31:0] OLED_result = 0;
     // reg [31:0] OLED_opcode_disp = 0;
     
-    assign cnt = slave_rx_counter;
+    assign cnt = slave_rx_counter[1:0];
     assign state_out = state;
     /*
     TODO
@@ -65,7 +70,7 @@ module slave_processing_fsm_top(
     
     
     always @ (posedge done) begin
-        if (slave_rx_counter == 3) begin
+        if (slave_rx_counter == 4) begin // NSV CHANGED FROM WORKING DEMO
             slave_rx_counter <= 1;
         end else begin
             slave_rx_counter <= slave_rx_counter + 1; // may need to change this since there's 4 possible cases
@@ -96,9 +101,17 @@ module slave_processing_fsm_top(
             RX3: begin
                 if (slave_rx_counter == 3) begin
                     operand2 <= slave_data_rx;
-                    state <= DECODE;
+                    state <= RX4;					// NSV CHANGED FROM WORKING DEMO
                 end else begin
                     state <= RX3;
+                end
+            end
+			RX4: begin 								// NSV CHANGED FROM WORKING DEMO
+                if (slave_rx_counter == 4) begin
+                    result <= slave_data_rx;
+                    state <= DECODE;
+                end else begin
+                    state <= RX4;
                 end
             end
             DECODE: begin
@@ -106,23 +119,31 @@ module slave_processing_fsm_top(
                 case (opcode[1:0])
                     2'b00: begin // ADD
                         OLED_opcode_disp <= {24'h41_44_44, 8'h00}; // ADD
-                        OLED_data <= operand1;
+						OLED_A <= operand1;
+						OLED_B <= operand2;
+                        OLED_result <= result;
                     end    
                     2'b01: begin // SUB 
-                        OLED_opcode_disp <= {24'h53_55_42 , 8'h00}; 
-                        OLED_data <= operand1;
+                        OLED_opcode_disp <= {24'h53_55_42 , 8'h00};
+						OLED_A <= operand1;
+						OLED_B <= operand2;
+                        OLED_result <= result;
                     end
                     2'b10:  begin // MULT
                         OLED_opcode_disp <= {24'h4D_55_4C , 8'h00};
-                        OLED_data <= mult_out;
+						OLED_A <= operand1;
+						OLED_B <= operand2;
+                        OLED_result <= mult_out;
                     end
                     2'b11: begin // unused?
                         OLED_opcode_disp <= 32'h6E_6F_6F_70;
-                        OLED_data <= 8'b1111_1111;
+						OLED_A <= operand1;
+						OLED_B <= operand2;
+                        OLED_result <= 8'b1111_1111;
                     end
                     default: begin  
                         OLED_opcode_disp <= 32'h73_68_76_69 ;
-                        OLED_data <= 8'b0000_0000;    
+                        OLED_result <= 8'b0000_0000;    
                     end                 
                 
                 endcase

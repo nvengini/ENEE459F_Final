@@ -46,7 +46,9 @@ module slave_top(
     wire rx_done;
     wire [31:0] slave_data_out;
     
-    wire [31:0] OLED_data;
+    wire [31:0] OLED_result;		// NSV CHANGED FROM WORKING DEMO
+	wire [31:0] OLED_A;				// NSV CHANGED FROM WORKING DEMO
+	wire [31:0] OLED_B;				// NSV CHANGED FROM WORKING DEMO
     wire [31:0] OLED_opcode_disp;
     assign rx_done_out = rx_done;
     assign slave_data_output = slave_data_out[7:0];
@@ -55,7 +57,9 @@ module slave_top(
         .done(rx_done),
         .slave_data_rx(slave_data_out),
         .clk(CLK),
-        .OLED_data(OLED_data),
+        .OLED_result(OLED_result),	// NSV CHANGED FROM WORKING DEMO
+		.OLED_A(OLED_A),			// NSV CHANGED FROM WORKING DEMO
+		.OLED_B(OLED_B),			// NSV CHANGED FROM WORKING DEMO
         .OLED_opcode_disp(OLED_opcode_disp),
         .state_out(state_out),
         .cnt(cnt)    
@@ -75,8 +79,10 @@ module slave_top(
     PmodOLEDCtrl oled(.CLK(CLK), 
                         .RST(RST), 
                         .EN(1'b1), 
-                        .data_in1(OLED_opcode_disp),
-                        .data_in2(OLED_data), 
+                        .data_in1(OLED_opcode_disp),	
+                        .data_in2(OLED_A), 			// NSV CHANGED FROM WORKING DEMO
+						.data_in3(OLED_B),			// NSV CHANGED FROM WORKING DEMO
+						.data_in4(OLED_result),		// NSV CHANGED FROM WORKING DEMO	
                         .CS(CS), 
                         .SDIN(SDIN), 
                         .SCLK(SCLK), 
