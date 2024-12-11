@@ -23,10 +23,10 @@
 module i2c_slave_controller(
     inout i2c_sda,
     inout i2c_scl,
-    output [31:0] dataout,
-    output [2:0] state_out,
-    output rx_done,
-    output start_out
+    output [31:0] dataout, // Slave reads 32 bits of data at a time
+    output [2:0] state_out, // debug output to Pmod
+    output rx_done, // output to state machine to indicate when a recieve is finished
+    output start_out // debug output to Pmod
     );
     
     localparam ADDRESS = 7'b0101010; // Slave Address
@@ -54,7 +54,7 @@ module i2c_slave_controller(
     reg sda_out;
     assign i2c_sda = (write_enable == 1) ? sda_out : 1'bz;
     
-    reg [31:0] data_out_intermediate;
+    reg [31:0] data_out_intermediate; // changed slave so it reads in 32 bits at a time
     assign dataout = data_out_intermediate;
    
     reg rx_done_flag = 0;
@@ -64,18 +64,8 @@ module i2c_slave_controller(
     
     
     
-//    always @(negedge i2c_sda) begin
-//        if ((start == 0) && (i2c_scl == 1)) begin
-//            start <= 1;
-//        end else if (state == READ_ADDR) begin
-//            start <= 0;
-//        end /* else begin
-//            start <= 0;
-//        end */ 
-//     end    
-
      
-     always @(negedge i2c_scl) begin
+     always @(negedge i2c_scl) begin // block for releasing sda or writing the acknowledge
         
         case(state)
             IDLE: begin
@@ -87,40 +77,42 @@ module i2c_slave_controller(
             end
             
             SEND_ACK: begin
-                write_enable <= 1;
+                write_enable <= 1; // Writes the acknowledge bit
                 sda_out <= 0;
             end
                 
             READ_DATA: begin
-                write_enable <= 0;
+                write_enable <= 0; // releases SDA  to let master send data
             end
             
             SEND_ACK2: begin
-                write_enable <= 1;
+                write_enable <= 1; // writes a second acknowledge bit
                 sda_out <= 0;
             end    
             
         endcase
     end  
             
-    always @(posedge i2c_scl) begin
+    always @(posedge i2c_scl) begin // block for changing the state
 
         case(state)
         
             IDLE: begin
                 if (start == 1) begin
                     state <= READ_ADDR;
-                    rx_addr[7] <= i2c_sda; // NSV changed
+                    rx_addr[7] <= i2c_sda;
                 end
                 counter <= 5'b00110;
                 //waiting for start condition
             end
             
             READ_ADDR: begin
-                rx_done_flag <= 0;
+                rx_done_flag <= 0; 
+                // resets receive done flag because this is a different receive operation
                 rx_addr[counter] <= i2c_sda;
                 if (counter == 0) begin
-                    if (rx_addr[7:1] == ADDRESS) begin
+                    // checks if the address the master has sent matches stored address
+                    if (rx_addr[7:1] == ADDRESS) begin 
                         rx_addr <= 8'b00000000;
                         state <= SEND_ACK;
                     end else begin
@@ -131,11 +123,11 @@ module i2c_slave_controller(
              
             SEND_ACK: begin
                 state <= READ_DATA;
-                counter = 5'b11111;
+                counter = 5'b11111; // counts down from 31 to 0 to read in all the data
             end
             
             READ_DATA: begin
-                data_in[counter] <= i2c_sda;
+                data_in[counter] <= i2c_sda; // Assigns sda bit to data_in register
                 if(counter == 0) begin
                     state <= SEND_ACK2;
                     
@@ -144,9 +136,9 @@ module i2c_slave_controller(
             
             SEND_ACK2: begin
                 data_out_intermediate <= data_in;
-                rx_done_flag <= 1;
+                rx_done_flag <= 1; // sets the receive done flag to high for the slave side state machine
                 state <= IDLE;
-                counter <= 5'b00110; // this just works
+                counter <= 5'b00110; 
             end
         endcase
     end        

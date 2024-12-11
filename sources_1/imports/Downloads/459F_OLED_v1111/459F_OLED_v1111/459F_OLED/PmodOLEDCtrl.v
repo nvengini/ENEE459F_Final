@@ -37,10 +37,10 @@ module PmodOLEDCtrl(
     input RST,
     input EN,
     // input [3:0] SW, // 4-bit switch input
-    input [31:0] data_in1,
-    input [31:0] data_in2,
-	input [31:0] data_in3,
-	input [31:0] data_in4,
+    input [31:0] data_in1, // Opecode Input
+    input [31:0] data_in2, // Operand A
+	input [31:0] data_in3, // Operand B
+	input [31:0] data_in4, // Result
     output CS,
     output SDIN,
     output SCLK,
@@ -307,10 +307,13 @@ localparam [127:0] PAGE3_TEXT_BASE = {8'h53, 8'h75, 8'h63, 8'h63, 8'h65, 8'h73, 
                 end
                 "OledReady" : begin
                     if(EN == 1'b1) begin
-                        // Update pages based on switch status
-                        Page0_reg <= {data_in1, 96'h0000_0000_0000_0000_0000_0000}; // NSV CHANGED FROM WORKING DEMO
+                        // Page 0 displays opcode
+                        Page0_reg <= {data_in1, 96'h0000_0000_0000_0000_0000_0000}; // Displays opcode, operands, and result on OLED
+                        // Page 1 displays Operand A
                         Page1_reg <= {convert_to_ascii_hex(data_in3[31:24]), convert_to_ascii_hex(data_in3[23:16]),convert_to_ascii_hex(data_in3[15:8]), convert_to_ascii_hex(data_in3[7:0]), 32'h3C_2D_20_41,32'h0000_0000};
+                        // Page 2 displays Operand B
                         Page2_reg <= {convert_to_ascii_hex(data_in2[31:24]), convert_to_ascii_hex(data_in2[23:16]),convert_to_ascii_hex(data_in2[15:8]), convert_to_ascii_hex(data_in2[7:0]), 32'h3C_2D_20_42,32'h0000_0000};
+                        // Page 3 displays the result
                         Page3_reg <= {convert_to_ascii_hex(data_in4[31:24]), convert_to_ascii_hex(data_in4[23:16]),convert_to_ascii_hex(data_in4[15:8]), convert_to_ascii_hex(data_in4[7:0]), 64'h3C_2D_52_65_73_75_6C_74};
                         current_state <= "OledDisplay";
                     end
@@ -321,7 +324,7 @@ localparam [127:0] PAGE3_TEXT_BASE = {8'h53, 8'h75, 8'h63, 8'h63, 8'h65, 8'h73, 
                     end
                 end
                 "Done" : begin
-//                    if(EN == 1'b0) begin          // NSV Changed
+//                    if(EN == 1'b0) begin    // enable check is skipped so that OLED constantly updates
 //                        current_state <= "OledReady";
 //                    end
                     current_state <= "OledReady";
